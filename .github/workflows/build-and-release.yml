@@ -38,19 +38,18 @@ jobs:
           $version = $matches[1]
           $informationalVersion = $version
         } else {
-          # Get last tag or start with 0.0.0
-          $lastTag = git describe --tags --abbrev=0 2>$null
-          if ($lastTag) {
-            $lastTag = $lastTag -replace '^v', ''
-          } else {
-            $lastTag = "0.0.0"
+          # Get highest semantic tag from repository or start with v0.0.0
+          $lastTag = git tag --list 'v*' --sort=-v:refname | Select-Object -First 1
+          if (-not $lastTag) {
+            $lastTag = "v0.0.0"
           }
+          $lastTag = $lastTag -replace '^v', ''
           
           # Parse version
           $parts = $lastTag -split '\.'
-          $major = [int]$parts[0]
-          $minor = [int]$parts[1]
-          $patch = [int]$parts[2]
+          $major = if ($parts.Length -gt 0) { [int]$parts[0] } else { 0 }
+          $minor = if ($parts.Length -gt 1) { [int]$parts[1] } else { 0 }
+          $patch = if ($parts.Length -gt 2) { [int]$parts[2] } else { 0 }
           
           # Check commit message for version bump
           $commitMsg = git log -1 --pretty=%B

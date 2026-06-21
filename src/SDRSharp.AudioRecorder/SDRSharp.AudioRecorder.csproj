@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>SDRSharp.AudioRecorder</AssemblyName>
-    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
     <UseWindowsForms>True</UseWindowsForms>
     <TargetFramework>net9.0-windows</TargetFramework>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <AssemblyTitle>Audio Recorder Plug-in for SDR#</AssemblyTitle>
+    <Company>Updated by thewraith2008</Company>
+    <Product>Modified by thewraith2008 (Original by Ian Gilmour and TSSDR)</Product>
+    <Copyright>Modified by thewraith2008 (Original by Ian Gilmour and TSSDR)</Copyright>
   </PropertyGroup>
   <PropertyGroup>
     <LangVersion>12.0</LangVersion>
