@@ -35,8 +35,36 @@ jobs:
         if ($env:GITHUB_REF -match 'refs/tags/v(.*)') {
           $version = $matches[1]
         } else {
-          $version = "dev-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+          # Get last tag or start with 0.0.0
+          $lastTag = git describe --tags --abbrev=0 2>$null
+          if ($lastTag) {
+            $lastTag = $lastTag -replace '^v', ''
+          } else {
+            $lastTag = "0.0.0"
+          }
+          
+          # Parse version
+          $parts = $lastTag -split '\.'
+          $major = [int]$parts[0]
+          $minor = [int]$parts[1]
+          $patch = [int]$parts[2]
+          
+          # Check commit message for version bump
+          $commitMsg = git log -1 --pretty=%B
+          if ($commitMsg -match '\[major\]|BREAKING CHANGE') {
+            $major++
+            $minor = 0
+            $patch = 0
+          } elseif ($commitMsg -match '\[minor\]|^feat:') {
+            $minor++
+            $patch = 0
+          } else {
+            $patch++
+          }
+          
+          $version = "$major.$minor.$patch"
         }
+        
         echo "VERSION=$version" >> $env:GITHUB_OUTPUT
         echo "Version: $version"
 
