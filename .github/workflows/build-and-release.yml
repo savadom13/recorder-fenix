@@ -1,0 +1,87 @@
+﻿name: Build and Release
+
+on:
+  push:
+    branches: [ master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore src/SDRSharp.AudioRecorder/SDRSharp.AudioRecorder.csproj
+
+    - name: Build
+      run: dotnet build src/SDRSharp.AudioRecorder/SDRSharp.AudioRecorder.csproj --configuration Release --no-restore
+
+    - name: Get version
+      id: get_version
+      shell: pwsh
+      run: |
+        if ($env:GITHUB_REF -match 'refs/tags/v(.*)') {
+          $version = $matches[1]
+        } else {
+          $version = "dev-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        }
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        echo "Version: $version"
+
+    - name: Package DLLs
+      shell: pwsh
+      run: |
+        $outputDir = "src/SDRSharp.AudioRecorder/bin/Release/net9.0-windows"
+        $packageDir = "SDRSharp.AudioRecorder-${{ steps.get_version.outputs.VERSION }}"
+
+        New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+
+        Copy-Item -Path "$outputDir/SDRSharp.AudioRecorder.dll" -Destination $packageDir -Force
+
+        if (Test-Path "$outputDir/SDRSharp.AudioRecorder.pdb") {
+          Copy-Item -Path "$outputDir/SDRSharp.AudioRecorder.pdb" -Destination $packageDir -Force
+        }
+
+        Copy-Item -Path "SDRSharp.Common.dll" -Destination $packageDir -Force
+        Copy-Item -Path "SDRSharp.PluginsCom.dll" -Destination $packageDir -Force
+        Copy-Item -Path "SDRSharp.Radio.dll" -Destination $packageDir -Force
+
+        if (Test-Path "README.md") {
+          Copy-Item -Path "README.md" -Destination $packageDir -Force
+        }
+
+        if (Test-Path "changelog.txt") {
+          Copy-Item -Path "changelog.txt" -Destination $packageDir -Force
+        }
+
+        Compress-Archive -Path "$packageDir/*" -DestinationPath "SDRSharp.AudioRecorder-${{ steps.get_version.outputs.VERSION }}.zip" -Force
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SDRSharp.AudioRecorder-${{ steps.get_version.outputs.VERSION }}
+        path: SDRSharp.AudioRecorder-${{ steps.get_version.outputs.VERSION }}.zip
+        retention-days: 90
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: SDRSharp.AudioRecorder-${{ steps.get_version.outputs.VERSION }}.zip
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
