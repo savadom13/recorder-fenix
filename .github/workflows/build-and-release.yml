@@ -111,11 +111,16 @@ jobs:
     - name: Build
       shell: pwsh
       run: |
+        $outputDir = "bin/Release/${{ matrix.platform }}/"
+
         $args = @(
           "src/SDRSharp.AudioRecorder/SDRSharp.AudioRecorder.csproj",
           "--configuration", "Release",
           "--no-restore",
           "/p:Platform=${{ matrix.platform }}",
+          "/p:OutputPath=$outputDir",
+          "/p:AppendTargetFrameworkToOutputPath=false",
+          "/p:AppendRuntimeIdentifierToOutputPath=false",
           "/p:Version=${{ needs.version.outputs.VERSION }}",
           "/p:AssemblyVersion=${{ needs.version.outputs.ASSEMBLY_VERSION }}",
           "/p:FileVersion=${{ needs.version.outputs.ASSEMBLY_VERSION }}",
@@ -132,15 +137,15 @@ jobs:
     - name: Package DLLs
       shell: pwsh
       run: |
-        $outputDir = "src/SDRSharp.AudioRecorder/bin/Release/net9.0-windows/${{ matrix.platform }}"
+        $outputDir = "src/SDRSharp.AudioRecorder/bin/Release/${{ matrix.platform }}"
         $packageDir = "SDRSharp.AudioRecorder-${{ needs.version.outputs.VERSION }}-${{ matrix.platform }}"
 
         New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
 
-        Copy-Item -Path "$outputDir/SDRSharp.AudioRecorder.dll" -Destination $packageDir -Force
+        Copy-Item -Path (Join-Path $outputDir "SDRSharp.AudioRecorder.dll") -Destination $packageDir -Force
 
-        if ("${{ needs.version.outputs.IS_MASTER }}" -ne "True" -and (Test-Path "$outputDir/SDRSharp.AudioRecorder.pdb")) {
-          Copy-Item -Path "$outputDir/SDRSharp.AudioRecorder.pdb" -Destination $packageDir -Force
+        if ("${{ needs.version.outputs.IS_MASTER }}" -ne "True" -and (Test-Path (Join-Path $outputDir "SDRSharp.AudioRecorder.pdb"))) {
+          Copy-Item -Path (Join-Path $outputDir "SDRSharp.AudioRecorder.pdb") -Destination $packageDir -Force
         }
 
         Copy-Item -Path "SDRSharp.Common.dll" -Destination $packageDir -Force
